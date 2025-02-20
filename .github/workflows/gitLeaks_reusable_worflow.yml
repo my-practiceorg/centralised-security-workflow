@@ -1,0 +1,25 @@
+name: Gitleaks Reusable Secret Scanning Workflow
+
+on:
+  workflow_call:
+    secrets:
+      GITLEAKS_LICENSE: {}  # Accept this secret from the caller workflow
+
+jobs:
+  scan:
+    name: Gitleaks Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Check Gitleaks License Environment Variable
+        run: echo "Gitleaks License:" ${{ secrets.GITLEAKS_LICENSE }}
+
+      - name: Run Gitleaks scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Using GITHUB_TOKEN from GitHub
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}  # Accessing the license
