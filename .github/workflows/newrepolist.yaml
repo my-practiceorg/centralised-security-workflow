@@ -75,6 +75,13 @@ jobs:
         run: |
           python applybranchprotection.py -pat ${{ secrets.MY_PAT }} -org my-practiceorg || (echo "An error occurred while running the script." > error.log && exit 1)
 
+      - name: Upload CSV as Artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: branch_protection_results
+          path: branch_protection_results.csv
+          
       - name: Notify Slack with CSV Link
         if: success()
         run: |
