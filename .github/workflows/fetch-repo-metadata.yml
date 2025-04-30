@@ -1,35 +1,46 @@
-name: Fetch Repo Metadata - Last 30 Days
+name: Fetch Repo Metadata Monthly
 
 on:
-  workflow_dispatch:  # Trigger manually via UI
+  schedule:
+    - cron: '0 0 1 * *'  # Midnight on the 1st of every month
+  workflow_dispatch:  # Allow manual trigger
 
 jobs:
-  fetch-repo-data:
+  fetch-metadata:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.10'
 
-      - name: Install dependencies (if any)
-        run: |
-          python -m pip install --upgrade pip
+      - name: Install dependencies
+        run: pip install requests
 
-      - name: Run Python script to fetch metadata
+      - name: Run Python script
         env:
-          GITHUB_TOKEN: ${{ secrets.MY_PAT }}  # Set this in org or repo secrets
-          ORG_NAME: your-org-name
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ORG_NAME: ${{ secrets.ORG_NAME }}
         run: |
-          python fetch_metadata.py --github_token $GITHUB_TOKEN --org_name $ORG_NAME
+          python .github/scripts/fetch_metadata.py \
+            --github_token $GITHUB_TOKEN \
+            --org_name $ORG_NAME
 
-      - name: Upload result CSV as artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload CSV artifact
+        uses: actions/upload-artifact@v3
         with:
           name: repos_last_30_days
           path: repos_last_30_days.csv
 
+      - name: Notify Slack on failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: repo,message,commit,author,took
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
