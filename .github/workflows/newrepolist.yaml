@@ -79,3 +79,8 @@ jobs:
         if: failure()
         run: |
           curl -X POST -H 'Content-type: application/json' --data '{"text":"There was an error running the GitHub Repos script. You can download the error log here: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts'"}' ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Run GitHub Repos Script
+        id: apply_BP_script
+        run: |
+          python applybranchprotection.py -pat ${{ secrets.MY_PAT }} -org my-practiceorg || (echo "An error occurred while running the script." > error.log && exit 1)
