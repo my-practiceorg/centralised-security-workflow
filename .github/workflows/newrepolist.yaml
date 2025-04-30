@@ -1,0 +1,81 @@
+name: Monthly Audit New Repos For Secret Scan Config
+
+on:
+  workflow_dispatch: # Allows the workflow to be manually triggered
+  schedule:
+    - cron: '0 0 1 * *' # Runs on the 1st of every month at midnight
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Run GitHub Repos Script
+        id: run_script
+        run: |
+          python fetch_metadata.py -pat ${{ secrets.MY_PAT }} -org my-practiceorg || (echo "An error occurred while running the script." > error.log && exit 1)
+
+      - name: List Files in Workspace (After Script Execution)
+        run: |
+          echo "Listing all files in the current directory after running the script:"
+          ls -alh
+
+      - name: Print File Path for Debugging
+        run: |
+          echo "Attempting to check the existence of repos_last_30_days.csv in the following path:"
+          realpath repos_last_30_days.csv
+
+      - name: Verify CSV Generation (Using Absolute Path)
+        run: |
+          CSV_PATH=$(realpath repos_last_30_days.csv)
+          echo "Checking if the CSV file exists at: $CSV_PATH"
+          if [ -f "$CSV_PATH" ]; then
+            echo "CSV file exists: $CSV_PATH"
+          else
+            echo "CSV file does not exist at: $CSV_PATH"
+            exit 1
+          fi
+        shell: bash
+
+      - name: Upload CSV as Artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: repos_last_30_days
+          path: repos_last_30_days.csv
+
+      - name: Create Placeholder Error Log
+        if: failure()
+        run: |
+          echo "No error log found, creating a placeholder."
+          echo "No error log found, but the script did not generate a CSV file." > error.log
+
+      - name: Upload error log as Artifact
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: error_log
+          path: error.log
+
+      - name: Notify Slack with CSV Link
+        if: success()
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data '{"text":"The CSV file with the GitHub repositories created in the last 30 days has been generated and uploaded. You can download it here: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts'"}' ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notify Slack with Error Log Link
+        if: failure()
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data '{"text":"There was an error running the GitHub Repos script. You can download the error log here: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts'"}' ${{ secrets.SLACK_WEBHOOK_URL }}
