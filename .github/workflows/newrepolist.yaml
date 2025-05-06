@@ -82,14 +82,21 @@ jobs:
           name: branch_protection_results
           path: branch_protection_results.csv
           
-      - name: Notify Slack with CSV Link
+      - name: Notify Slack with Branch Protection Summary
         if: success()
         run: |
-          curl -X POST -H 'Content-type: application/json' --data '{"text":"The CSV file with the GitHub repositories created in the last 30 days has been generated and uploaded. You can download it here: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts'"}' ${{ secrets.SLACK_WEBHOOK_URL }}
+          echo "Generating Slack-friendly summary from branch_protection_results.csv..."
+          SUMMARY=$(head -n 11 branch_protection_results.csv | column -s, -t)
+          SUMMARY_ESCAPED=$(echo "$SUMMARY" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+
+          curl -X POST -H 'Content-type: application/json' --data "{
+            \"text\": \"✅ *Branch protection applied to the following repositories:*\n\`\`\`\n$SUMMARY_ESCAPED\n\`\`\`\n🔗 *Artifacts available here:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts>\"
+          }" ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Notify Slack with Error Log Link
         if: failure()
         run: |
-          curl -X POST -H 'Content-type: application/json' --data '{"text":"There was an error running the GitHub Repos script. You can download the error log here: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts'"}' ${{ secrets.SLACK_WEBHOOK_URL }}
-
+          curl -X POST -H 'Content-type: application/json' --data "{
+            \"text\": \"❌ *An error occurred during the GitHub Repos audit.*\n🔗 *Download the error log here:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts>\"
+          }" ${{ secrets.SLACK_WEBHOOK_URL }}
       
