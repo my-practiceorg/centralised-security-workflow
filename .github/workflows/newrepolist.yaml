@@ -85,13 +85,32 @@ jobs:
       - name: Notify Slack with Branch Protection Summary
         if: success()
         run: |
-          echo "Generating Slack-friendly summary from branch_protection_results.csv..."
-          SUMMARY=$(head -n 11 branch_protection_results.csv | column -s, -t)
-          SUMMARY_ESCAPED=$(echo "$SUMMARY" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+          echo "Preparing Slack summary..."
 
-          curl -X POST -H 'Content-type: application/json' --data "{
-            \"text\": \"✅ *Branch protection applied to the following repositories:*\n\`\`\`\n$SUMMARY_ESCAPED\n\`\`\`\n🔗 *Artifacts available here:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts>\"
-          }" ${{ secrets.SLACK_WEBHOOK_URL }}
+          if [ ! -f branch_protection_results.csv ]; then
+            echo "branch_protection_results.csv not found. Skipping Slack summary."
+            exit 0
+          fi
+
+          # Extract up to 10 rows + header
+          head -n 11 branch_protection_results.csv > summary.csv
+
+          # Format into table
+          TABLE=$(column -s, -t summary.csv)
+
+          # Escape for JSON
+          TABLE_ESCAPED=$(printf "%s\n" "$TABLE" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+
+          # Create Slack message
+          JSON_PAYLOAD=$(cat <<EOF
+{
+  "text": "✅ *Branch protection applied to the following repositories:*\n\`\`\`\n$TABLE_ESCAPED\n\`\`\`\n🔗 *Artifacts:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts>"
+}
+EOF
+)
+
+          # Send to Slack
+          curl -X POST -H 'Content-type: application/json' --data "$JSON_PAYLOAD" ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Notify Slack with Error Log Link
         if: failure()
