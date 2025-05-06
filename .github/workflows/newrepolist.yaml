@@ -85,6 +85,8 @@ jobs:
       - name: Notify Slack with Branch Protection Summary
         if: success()
         run: |
+          sudo apt-get update && sudo apt-get install -y jq
+
           echo "Preparing Slack summary..."
 
           # GitHub context vars
@@ -98,16 +100,14 @@ jobs:
 
           head -n 11 branch_protection_results.csv > summary.csv
           TABLE=$(column -s, -t summary.csv)
-          TABLE_ESCAPED=$(printf "%s\n" "$TABLE" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
 
-          JSON_PAYLOAD=$(cat <<EOF
-{
-  "text": "✅ *Branch protection applied to the following repositories:*\n\`\`\`\n$TABLE_ESCAPED\n\`\`\`\n📄 *Download full CSV and logs:* <$ARTIFACTS_LINK>\n\n✅ *The CSV file with the GitHub repositories created in the last 30 days has also been uploaded.*"
-}
-EOF
-)
+          TEXT="✅ *Branch protection applied to the following repositories:*\n\`\`\`\n$TABLE\n\`\`\`"
+          TEXT+="\n📄 *Download full CSV and logs:* <$ARTIFACTS_LINK>"
+          TEXT+="\n\n✅ *The CSV file with the GitHub repositories created in the last 30 days has also been uploaded.*"
 
-          curl -X POST -H 'Content-type: application/json' --data "$JSON_PAYLOAD" ${{ secrets.SLACK_WEBHOOK_URL }}
+          jq -n --arg text "$TEXT" '{text: $text}' > payload.json
+
+          curl -X POST -H 'Content-type: application/json' --data @payload.json ${{ secrets.SLACK_WEBHOOK_URL }}      
 
       - name: Notify Slack with Error Log Link
         if: failure()
@@ -116,4 +116,3 @@ EOF
           curl -X POST -H 'Content-type: application/json' --data "{
             \"text\": \"❌ *An error occurred during the GitHub Repos audit.*\n📄 *Download the error log:* <$GITHUB_URL#artifacts>\"
           }" ${{ secrets.SLACK_WEBHOOK_URL }}
-      
