@@ -49,6 +49,11 @@ jobs:
             exit 1
           fi
         shell: bash
+        
+      - name: Add gitLeaks & pre-commit files for non compliant repos
+        id: add_configs
+        run: |
+          python addconfigs.py -pat ${{ secrets.MY_PAT }} -org my-practiceorg || (echo "An error occurred while running the script." > error.log && exit 1)
 
       - name: Upload CSV as Artifact
         if: success()
@@ -69,11 +74,6 @@ jobs:
         with:
           name: error_log
           path: error.log
-
-      - name: Add gitLeaks & pre-commit files for non compliant repos
-        id: add_configs
-        run: |
-          python addconfigs.py -pat ${{ secrets.MY_PAT }} -org my-practiceorg || (echo "An error occurred while running the script." > error.log && exit 1)
 
       - name: Apply Branch Protection to non compliant repos
         id: apply_BP_script
