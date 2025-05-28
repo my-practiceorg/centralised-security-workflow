@@ -98,9 +98,9 @@ def get_repo_custom_properties(repo_full_name, headers):
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
         for prop in response.json():
-            if prop['property_name'] == 'Repo-type':
+            if prop['property_name'] == 'Repo_Type':
                 return prop['value']
-        return 'Repo-type not found'
+        return 'Repo_Type not found'
     return "Unknown"
 
 def check_branch_protection(repo_full_name, default_branch, headers):
@@ -146,14 +146,14 @@ if __name__ == "__main__":
             writer.writerow([
                 'Repo Name', 'Created At', 'Created By', 'Last Updated By',
                 'Has .pre-commit-config.yaml', 'Has gitleaks_secret_scan.yml',
-                'Repo-type', 'Branch Protection Enabled', 'Rulesets Enabled',
+                'Repo_Type', 'Branch Protection Enabled', 'Rulesets Enabled',
                 'Default Branch Name'
             ])
             for repo in repos:
                 writer.writerow([
                     repo['name'], repo['created_at'], repo['creator'], repo['last_updated_by'],
                     repo['has_pre_commit_config'], repo['has_gitleaks_workflow'],
-                    repo['Repo-type'], repo['branch_protection_enabled'], repo['rulesets_enabled'],
+                    repo['Repo_Type'], repo['branch_protection_enabled'], repo['rulesets_enabled'],
                     repo['default_branch_name']
                 ])
         print(f"✅ Repositories report written to 'repos_last_30_days.csv'.")
