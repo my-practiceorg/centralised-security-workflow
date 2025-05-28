@@ -43,10 +43,8 @@ def get_repos_created_last_30_days(github_token, org_name):
                 branch_protection_enabled = check_branch_protection(full_name, default_branch, headers)
                 rulesets_enabled = check_rulesets_enabled(full_name, headers)
 
-                # Only fetch default branch name if both protections are disabled
-                default_branch_name = ''
-                if not branch_protection_enabled and not rulesets_enabled:
-                    default_branch_name = get_default_branch_name(full_name, default_branch, headers)
+                # Always fetch default branch name
+                default_branch_name = get_default_branch_name(full_name, default_branch, headers)
 
                 repo_list.append({
                     'name': repo['name'],
@@ -138,6 +136,7 @@ if __name__ == "__main__":
     parser.add_argument('-pat', '--github_token', required=True, help='GitHub Personal Access Token')
     parser.add_argument('-org', '--org_name', required=True, help='GitHub Organization Name')
     args = parser.parse_args()
+
     repos = get_repos_created_last_30_days(args.github_token, args.org_name)
 
     if repos:
