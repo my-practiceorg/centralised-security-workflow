@@ -55,7 +55,7 @@ def get_repos_created_last_30_days(github_token, org_name):
                     'last_updated_by': last_updated_by,
                     'has_pre_commit_config': has_pre_commit_config,
                     'has_gitleaks_workflow': has_gitleaks_workflow,
-                    'Repo-type': custom_properties,
+                    'Repo_Type': custom_properties,
                     'branch_protection_enabled': branch_protection_enabled,
                     'rulesets_enabled': rulesets_enabled,
                     'default_branch_name': default_branch_name
