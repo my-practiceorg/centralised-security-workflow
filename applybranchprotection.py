@@ -65,7 +65,7 @@ def apply_protection_from_csv(github_token, org_name):
             default_branch = row.get('Default Branch Name', '').strip()
             full_repo_name = f"{org_name}/{repo_name}"
 
-            repo_type_raw = row.get('Repo-type', '')
+            repo_type_raw = row.get('Repo_Type', '')
             bp_raw = row.get('Branch Protection Enabled', '')
             rs_raw = row.get('Rulesets Enabled', '')
 
@@ -75,7 +75,7 @@ def apply_protection_from_csv(github_token, org_name):
 
             print(f"🔍 Checking {repo_name}: type='{repo_type_raw}' → {repo_type}, BP='{bp_raw}' → {branch_protection_enabled}, RS='{rs_raw}' → {rulesets_enabled}")
 
-            if repo_type == 'prod repo' and not branch_protection_enabled and not rulesets_enabled:
+            if repo_type == 'prod' and not branch_protection_enabled and not rulesets_enabled:
                 result = apply_branch_protection(full_repo_name, default_branch, headers)
             else:
                 print(f"ℹ️ Skipping {repo_name}: conditions not met (type: {repo_type}, protection enabled: {branch_protection_enabled}, rulesets enabled: {rulesets_enabled})")
