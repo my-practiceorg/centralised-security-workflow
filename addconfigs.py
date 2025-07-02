@@ -25,7 +25,7 @@ on:
     branches: [main, master]
 jobs:
   scan:
-    uses: my-practiceorg/centralised-security-workflow/.github/workflows/gitLeaks_reusable_worflow.yml@main
+    uses: Capillary/security-workflows/.github/workflows/gitLeaks_reusable_worflow.yml@main
     secrets:
       GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 """
@@ -73,15 +73,27 @@ def create_branch(repo, from_sha, headers):
 def commit_file(repo, path, content, branch, headers):
     url = f"{GITHUB_API_URL}/repos/{repo}/contents/{path}"
     payload = {
-        "message": f"Add {path}",
+        "message": "Add path",
         "content": base64.b64encode(content.encode()).decode(),
         "branch": branch
     }
-    sha = get_file_sha(repo, path, headers)
-    if sha:
-        payload["sha"] = sha
-    r = safe_request("PUT", url, headers, data=json.dumps(payload))
-    return r.status_code in [200, 201]
+
+    try:
+        sha = get_file_sha(repo, path, headers)
+        if sha:
+            payload["sha"] = sha
+
+        r = safe_request("PUT", url, headers, data=json.dumps(payload))
+
+        if r.status_code not in [200, 201]:
+            print(f"Failed to commit file. Status: {r.status_code}, Response: {r.text}")
+            return False
+
+        return True
+
+    except Exception as e:
+        print(f"Exception occurred during commit_file: {str(e)}")
+        return False
 
 
 def create_pull_request(repo, default_branch, headers):
