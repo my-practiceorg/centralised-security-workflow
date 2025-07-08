@@ -25,7 +25,7 @@ on:
     branches: [main, master]
 jobs:
   scan:
-    uses: Capillary/security-workflows/.github/workflows/gitLeaks_reusable_worflow.yml@main
+    uses: my-practiceorg/centralised-security-workflow/.github/workflows/gitLeaks_reusable_worflow.yml@main
     secrets:
       GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 """
