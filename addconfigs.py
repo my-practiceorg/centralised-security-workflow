@@ -96,11 +96,24 @@ def commit_file(repo, path, content, branch, headers):
         return False
 
 
-def create_pull_request(repo, default_branch, headers):
+def create_pull_request(repo, default_branch, headers, files_to_add=None):
     url = f"{GITHUB_API_URL}/repos/{repo}/pulls"
+    
+    # Dynamic title and body based on files being added
+    if files_to_add:
+        if len(files_to_add) == 1:
+            title = f"Add {files_to_add[0]}"
+            body = f"Adding {files_to_add[0]}."
+        else:
+            title = f"Add {' and '.join(files_to_add)}"
+            body = f"Adding {', '.join(files_to_add)}."
+    else:
+        title = PR_TITLE
+        body = PR_BODY
+    
     data = {
-        "title": PR_TITLE,
-        "body": PR_BODY,
+        "title": title,
+        "body": body,
         "head": NEW_BRANCH,
         "base": default_branch,
     }
@@ -130,30 +143,61 @@ def process_repo(row, headers, org):
     }
 
     try:
-        if repo_type.lower() == "prod" and not pre_commit_present and not gitleaks_present:
+        # Check if any config files are missing for prod repos
+        if repo_type.lower() == "prod" and (not pre_commit_present or not gitleaks_present):
             if not branch_protection:
                 print(f"[{repo}] Direct committing...")
-                pre_commit_success = commit_file(full_repo, PRE_COMMIT_FILE_PATH, PRE_COMMIT_CONTENT, default_branch, headers)
-                gitleaks_success = commit_file(full_repo, GITLEAKS_FILE_PATH, GITLEAKS_WORKFLOW_CONTENT, default_branch, headers)
-
-                if pre_commit_success:
-                    result["pre_commit_added"] = "TRUE"
-                if gitleaks_success:
-                    result["gitleaks_added"] = "TRUE"
-                if pre_commit_success and gitleaks_success:
+                pre_commit_success = True
+                gitleaks_success = True
+                
+                # Only add pre-commit config if it's missing
+                if not pre_commit_present:
+                    pre_commit_success = commit_file(full_repo, PRE_COMMIT_FILE_PATH, PRE_COMMIT_CONTENT, default_branch, headers)
+                    if pre_commit_success:
+                        result["pre_commit_added"] = "TRUE"
+                else:
+                    result["pre_commit_added"] = "FALSE (already exists)"
+                
+                # Only add gitleaks config if it's missing
+                if not gitleaks_present:
+                    gitleaks_success = commit_file(full_repo, GITLEAKS_FILE_PATH, GITLEAKS_WORKFLOW_CONTENT, default_branch, headers)
+                    if gitleaks_success:
+                        result["gitleaks_added"] = "TRUE"
+                else:
+                    result["gitleaks_added"] = "FALSE (already exists)"
+                
+                # Set status based on what was actually committed
+                if (not pre_commit_present and pre_commit_success) or (not gitleaks_present and gitleaks_success):
                     result["status"] = "direct commit"
             else:
                 print(f"[{repo}] Branch protection enabled. Creating PR.")
                 sha = get_branch_sha(full_repo, default_branch, headers)
                 create_branch(full_repo, sha, headers)
-                commit_file(full_repo, PRE_COMMIT_FILE_PATH, PRE_COMMIT_CONTENT, NEW_BRANCH, headers)
-                commit_file(full_repo, GITLEAKS_FILE_PATH, GITLEAKS_WORKFLOW_CONTENT, NEW_BRANCH, headers)
-                pr_url = create_pull_request(full_repo, default_branch, headers)
-                if pr_url:
+                
+                files_to_add = []
+                
+                # Only add pre-commit config if it's missing
+                if not pre_commit_present:
+                    commit_file(full_repo, PRE_COMMIT_FILE_PATH, PRE_COMMIT_CONTENT, NEW_BRANCH, headers)
                     result["pre_commit_added"] = "TRUE"
+                    files_to_add.append("pre-commit config")
+                else:
+                    result["pre_commit_added"] = "FALSE (already exists)"
+                
+                # Only add gitleaks config if it's missing
+                if not gitleaks_present:
+                    commit_file(full_repo, GITLEAKS_FILE_PATH, GITLEAKS_WORKFLOW_CONTENT, NEW_BRANCH, headers)
                     result["gitleaks_added"] = "TRUE"
-                    result["pull_request_url"] = pr_url
-                    result["status"] = "pull request"
+                    files_to_add.append("gitleaks workflow")
+                else:
+                    result["gitleaks_added"] = "FALSE (already exists)"
+                
+                # Create PR if any files were added
+                if files_to_add:
+                    pr_url = create_pull_request(full_repo, default_branch, headers, files_to_add)
+                    if pr_url:
+                        result["pull_request_url"] = pr_url
+                        result["status"] = "pull request"
     except Exception as e:
         print(f"[{repo}] Error: {e}")
         result["status"] = "error"
