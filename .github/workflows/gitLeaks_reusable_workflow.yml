@@ -23,3 +23,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Using GITHUB_TOKEN from GitHub
           GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}  # Accessing the license
+          GITLEAKS_CONFIG: gitleaks/capillary-gitleaks.toml  # ✅ only added line (custom gitleak rules)
