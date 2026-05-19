@@ -1,1 +1,52 @@
+# gitleaks/capillary-gitleaks.toml
 
+[extend]
+  useDefault = true          # ✅ keeps ALL standard gitleaks rules running
+
+# RULE 1 — Slack Webhook
+
+[[rules]]
+  id = "slack-webhook-custom"
+  description = "Slack Webhook URL"
+  regex = '''https://hooks\.slack\.com/services/T[A-Z0-9]{8,}/B[A-Z0-9]{8,}/[A-Za-z0-9]{24,}'''
+  tags = ["slack", "webhook"]
+
+  [rules.allowlist]
+    regexes = ['''hooks\.slack\.com/services/TXXXXXXXX''']   # ignore placeholder examples
+    paths = ['''.*test.*''', '''.*mock.*''', '''.*example.*''']
+
+# RULE 2 — Databricks Token
+
+[[rules]]
+  id = "databricks-token-custom"
+  description = "Databricks Personal Access Token"
+  regex = '''dapi[a-zA-Z0-9]{32,}'''
+  tags = ["databricks", "token"]
+
+  [rules.allowlist]
+    regexes = ['''dapi[x]{32}''', '''dapi_example''']
+    paths = ['''.*test.*''', '''.*mock.*''']
+
+# RULE 3 — NPM Token
+
+[[rules]]
+  id = "npm-token-custom"
+  description = "NPM Access Token"
+  regex = '''(?i)(npm_[a-zA-Z0-9]{36}|//registry\.npmjs\.org/:_authToken\s*=\s*[a-zA-Z0-9\-]{36,})'''
+  tags = ["npm", "token"]
+
+  [rules.allowlist]
+    regexes = ['''npm_xxxx''', '''npm_example''']
+    paths = ['''.*test.*''', '''.*\.example.*''']
+
+# RULE 4 — Google Gemini API Key
+
+[[rules]]
+  id = "google-gemini-api-key-custom"
+  description = "Google Gemini API Key"
+  regex = '''AIzaSy[a-zA-Z0-9_\-]{33}'''
+  tags = ["google", "gemini", "api-key"]
+
+  [rules.allowlist]
+    regexes = ['''AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX''']
+    paths = ['''.*test.*''', '''.*mock.*''', '''.*example.*''']
